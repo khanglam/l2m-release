@@ -12,6 +12,8 @@ Windows helper for **Lineage2M**: auto dance / heal / assist macros and an optio
 
 No Python or AutoHotkey install is required for this build.
 
+Prebuilt binaries are in the **`dist/`** folder. Copy **both** `.exe` files from `dist/` into whatever folder you want to run from (they must stay together).
+
 ## First run
 
 1. Put **`L2M_Auto.exe`** and **`l2m_vision.exe`** in the same folder (keep them together).
