@@ -1,0 +1,55 @@
+# GitHub Action for the l2m-release repo (build.bat copies this file to
+# l2m-release/.github/workflows/release.yml).
+#
+# On every push that changes dist/version.txt, publishes a GitHub Release v<version>
+# with L2M.zip (L2M_Auto.exe + l2m_vision/) and its SHA-256 checksum. L2M Auto checks
+# the latest release on startup and offers the update. The release notes are the
+# message of the commit that was pushed.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ['dist/version.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: v
+        run: echo "version=$(tr -d ' \r\n' < dist/version.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this version is already released
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.version }}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Zip dist
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cd dist
+          zip -r -q ../L2M.zip L2M_Auto.exe l2m_vision
+          cd ..
+          sha256sum L2M.zip | cut -d' ' -f1 > L2M.zip.sha256
+
+      - name: Publish release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git log -1 --pretty=%B > notes.txt
+          gh release create "v${{ steps.v.outputs.version }}" L2M.zip L2M.zip.sha256 \
+            --title "v${{ steps.v.outputs.version }}" --notes-file notes.txt
